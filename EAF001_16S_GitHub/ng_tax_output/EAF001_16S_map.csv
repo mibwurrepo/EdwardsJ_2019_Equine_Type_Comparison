@@ -1,0 +1,25 @@
+#sample_id,OTU.ID,Type,Animal_ID,Animal.Name,Sex ,Age,Weight
+A1,A1,Donkey,ANI.12739,Al.McGuire,Gelding,6,145
+A2,A2,Donkey,ANI.8064,Babe.S,Female,19,134
+A3,A3,Donkey,ANI.11527,Bertie.R,Gelding,15,281
+A4,A4,Donkey,ANI.12197,Carole.Herron,Female,8,187
+A5,A5,Donkey,ANI.10608,Dotty.NT,Female,13,162
+A6,A6,Donkey,ANI.13230,Harry.Do.Eire,Gelding,8,210
+A7,A7,Donkey,ANI.12801,Indiana.Jones.Davies,Gelding,9,230
+A8,A8,Donkey,ANI.13456,Neddie.Dean.Eire,Gelding,7,214
+A9,A9,Pony,ANI.13366,Barney.Adamson,Gelding,19,241
+A10,A10,Pony,ANI.10325,Gypsy.Hudson,Gelding,21,133
+A11,A11,Pony,ANI.13098,Jasper.Gordon,Gelding,8,126
+A12,A12,Pony,ANI.9944,Lynsey.RSPCA,Female,11,215
+A13,A13,Pony,ANI.8499,Amy.Cafferata,Female,19,403
+A14,A14,Pony,ANI.9073,Axel.Folie.Ward,Gelding,20,226
+A15,A15,Pony,ANI.9566,Poppy.Parker,Female,22,438
+A16,A16,Pony,ANI.10038,Dillon.Harris,Gelding,14,232
+A17,A17,Mule-Hinny,ANI.13398,Candyfloss.Green,Female,8,236
+A18,A18,Mule-Hinny,ANI.13097,Elmo.Gordon,Gelding,4,166
+A19,A19,Mule-Hinny,ANI.13009,Marley.Richmond,Gelding,4,293
+A20,A20,Mule-Hinny,ANI.12743,Milky.Edwards,Gelding,12,258
+A21,A21,Mule-Hinny,ANI.10108,Molly.Crane,Female,10,337
+A22,A22,Mule-Hinny,ANI.12616,Ruby.Osborne,Female,5,236
+A23,A23,Mule-Hinny,ANI.13349,Sam.Wheeler,Gelding,26,333
+A24,A24,Mule-Hinny,ANI.11781,Spike.Greenwood,Gelding,24,180
