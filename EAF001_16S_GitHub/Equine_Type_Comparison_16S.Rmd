@@ -1,0 +1,168 @@
+---
+title: "Equine_Type_Comparison_16S"
+author: "Joan Edwards"
+date: "3 april 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+
+#activate libraries
+library(microbiome)
+library(microbiomeutilities)
+library(RColorBrewer)
+library(ggpubr)
+
+#create directories
+
+dir.create("results")
+dir.create("phyloseq_rds")
+
+```
+
+# Import data and create phyloseq object
+
+```{r}
+
+#import data into a phyloseq object. For this, you need a biom file, a mapping file in .csv format, and a tree file in .tre format:
+pseq1 <- read_phyloseq(otu.file = "./ng_tax_output/Joan_Angeline_EAF001_16S.biom", taxonomy.file = TRUE, metadata.file = "./ng_tax_output/EAF001_16S_map.csv", "biom")
+
+treefile_p1 <- ape::read.tree("./ng_tax_output/all_otus.tree")
+
+ps1 <- merge_phyloseq(pseq1, treefile_p1)
+ps1
+
+#remove <emply> labels in taxonomy. clean them
+
+tree <- ape::read.tree("./ng_tax_output/all_otus.tree")
+
+ps1 <- merge_phyloseq(ps1, tree)
+tax.mat <- tax_table(ps1)
+tax.df <- as.data.frame(tax.mat)
+
+tax.df[tax.df == "g__<empty>"] <- "g__"
+tax.df[tax.df == "k__<empty>"] <- "k__"
+tax.df[tax.df == "p__<empty>"] <- "p__"
+tax.df[tax.df == "c__<empty>"] <- "c__"
+tax.df[tax.df == "o__<empty>"] <- "o__"
+tax.df[tax.df == "f__<empty>"] <- "f__"
+tax_table(ps1) <- tax_table(as.matrix(tax.df))
+
+saveRDS(ps1, "./phyloseq_rds/ps1.rds")
+
+```
+
+
+```{r}
+ps1 <- readRDS("./phyloseq_rds/ps1.rds")
+
+```
+
+
+```{r}
+#transform to relative abundance for equine phyloseq object ps1
+ps.rel <- microbiome::transform(ps1, "compositional")
+
+#export a taxonomy table with the OTU numbers and taxonomy info (Ran helped me!)
+tax <-tax_table(ps.rel)
+write.table(tax, "./results/tax_info.txt")
+
+```
+
+# Boxplot Phylum 
+
+```{r}
+
+source("./codes/plot_taxa_boxplot_edit.R")
+
+unique(tax_table(ps1)[, "Phylum"])
+
+ps1.com <- ps1
+
+tax_table(ps1.com)[tax_table(ps1.com)[, "Phylum"] == "p__"] <- "Unclassified Phylum"
+
+
+unique(tax_table(ps1.com)[, "Phylum"])
+
+
+tax_table(ps1.com)[, colnames(tax_table(ps1.com))] <- gsub(tax_table(ps1.com)[, 
+                                                                              colnames(tax_table(ps1.com))], pattern = "[a-z]__", replacement = "")
+
+unique(tax_table(ps1.com)[, "Phylum"])
+
+
+pn <- plot_taxa_boxplot_edit(ps1.com, taxonomic.level = "Phylum",
+                             top.otu = 6, VariableA = "Type",
+                             title = "Phylum level differences for 6 phyla", color = "Set1")
+
+pn <- plot_taxa_boxplot_edit(ps1.com, "Phylum", 6, "Type", color = "Set1", "Phylum level differences for 6 genera")
+
+pn
+
+ggsave("./results/Phylum_6_boxplot_USE.pdf", height = 6, width = 10)
+
+
+```
+
+# Betadiversity 
+
+```{r}
+
+#check for skewnness
+set.seed(82010)
+hist(taxa_sums(ps1))
+
+hist(log10(taxa_sums(ps1)))
+
+
+#proceed with log10 data for beta-diversity weighted unifrac
+
+ps1.log10 <- microbiome::transform(ps1, "log10")
+
+wunifraclog10.pcoa <- ordinate(ps1.log10, method = "MDS", distance = "wunifrac")
+
+
+wunifraclog10.pcoa.plot <- plot_ordination(ps1.log10, wunifraclog10.pcoa, color = "Type", title = "Weighted Unifrac") +
+  labs(col = "Type") 
+wunifraclog10.pcoa.plot
+
+wunifraclog10.pcoa.plot <- wunifraclog10.pcoa.plot + scale_color_brewer("Type", palette = "Set1")
+wunifraclog10.pcoa.plot <- wunifraclog10.pcoa.plot + geom_point(size = 1) + theme_bw()
+wunifraclog10.pcoa.plot
+#No + stats_ellipses used due to convergence failure
+
+ggsave("./results/MDS using Weighted Unifrac_log10.pdf", height = 6, width = 8)
+
+#proceed with log10 data for unweighted unifrac
+
+unifraclog10.pcoa <- ordinate(ps1.log10, method = "MDS", distance = "unifrac")
+
+
+unifraclog10.pcoa.plot <- plot_ordination(ps1.log10, unifraclog10.pcoa, color = "Type", title = "UnWeighted Unifrac") +
+  labs(col = "Type") + scale_color_brewer("Type", palette = "Set1")
+unifraclog10.pcoa.plot <- unifraclog10.pcoa.plot + geom_point(size = 1) + theme_bw()
+unifraclog10.pcoa.plot
+
+ggsave("./results/MDS using UnWeighted Unifrac_log10.pdf", height = 6, width = 8)
+
+```
+
+# Merge UniFrac plots 
+
+```{r}
+p.ordinate <- ggarrange(unifraclog10.pcoa.plot,wunifraclog10.pcoa.plot,
+                        common.legend = TRUE, labels = c("A", "B"))
+p.ordinate
+ggsave("./results/Both_PCoA Unifrac_log10.pdf", height = 4, width = 7)
+
+
+```
+
+
+```{r}
+
+sessionInfo()
+
+```
+
+
