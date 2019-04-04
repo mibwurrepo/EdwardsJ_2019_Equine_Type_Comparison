@@ -1,0 +1,201 @@
+---
+title: "Equine_Type_Comparison_AF"
+author: "Joan Edwards"
+date: "4 april 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+
+#activate libraries
+
+library(microbiome)
+library(microbiomeutilities)
+library(RColorBrewer)
+library(ggpubr)
+
+#create directories
+
+dir.create("phyloseqobject_main")
+dir.create("results")
+```
+
+# Import data and create phyloseq object
+
+```{r}
+
+ps0 <- read_phyloseq(otu.file = "./ng_tax_output/EAF001_150_06minPerT_biom_FINAL_rev_tax.biom",
+                     taxonomy.file = NULL,
+                     metadata.file = "./ng_tax_output/EAF001_150_06minPerT_map.csv",
+                     type = "biom")
+ps0
+saveRDS(ps0, "./phyloseqobject_main/ps0.rds")
+
+#Add tree file
+
+tree <- ape::read.tree("./ng_tax_output/otu_m_minus_17109272.dnd")
+
+ps1 <- merge_phyloseq(ps0, tree)
+saveRDS(ps1, "./phyloseqobject_main/ps1.rds")
+
+```
+
+# Change column header names
+
+```{r}
+
+ps1 <- readRDS("./phyloseqobject_main/ps1.rds")
+
+head(tax_table(ps1))
+
+colnames(tax_table(ps1)) <- c("Phylum", "Class", "Order", "Family", "Genus", "Clade")
+
+head(tax_table(ps1))
+
+```
+
+
+```{r}
+#transform to relative abundance
+ps.rel <- microbiome::transform(ps1, "compositional")
+
+#export a taxonomy table with the OTU numbers and taxonomy info 
+tax <-tax_table(ps.rel)
+write.table(tax, "./results/tax_info.txt")
+
+## List dependencies
+pkg <- c("rmarkdown", "edgeR", "DESeq2", "dplyr", "tidyr", "ggplot2", 
+         "microbiome", "microbiomeutilities", "DT")
+
+## Check if dependencies are already installed
+pkg <- pkg[!(pkg %in% installed.packages()[, "Package"])]
+
+## If some dependency is missing, install it
+if (length(pkg) > 0) {
+  source("https://bioconductor.org/biocLite.R")
+  biocLite(pkg, dependencies = TRUE, ask = FALSE)
+}
+
+library(microbiome)
+library(microbiomeutilities)
+library(RColorBrewer)
+library(picante)
+library(ggpubr)
+
+set.seed(7375)
+
+```
+
+# Genus Boxplot
+
+```{r}
+
+ps1 <- readRDS("./phyloseqobject_main/ps1.rds")
+
+
+#Change taxa levels on column names
+
+head(tax_table(ps1))
+
+colnames(tax_table(ps1)) <- c("Phylum", "Class", "Order", "Family", "Genus", "Clade")
+
+head(tax_table(ps1))
+
+source("./codes/plot_taxa_boxplot_edit.R")
+
+unique(tax_table(ps1)[, "Genus"])
+
+ps1.com <- ps1
+
+tax_table(ps1.com)[tax_table(ps1.com)[, "Genus"] == "g_NA"] <- "Unclassified Genus"
+
+
+unique(tax_table(ps1.com)[, "Genus"])
+
+
+tax_table(ps1.com)[, colnames(tax_table(ps1.com))] <- gsub(tax_table(ps1.com)[, 
+                                                                              colnames(tax_table(ps1.com))], pattern = "[a-z]_", replacement = "")
+
+unique(tax_table(ps1.com)[, "Genus"])
+
+pn <- plot_taxa_boxplot_edit(ps1.com, taxonomic.level = "Genus",
+                             top.otu = 6, VariableA = "Species",
+                             title = "Genus level differences for 6 genera", color = "Set1")
+
+pn <- plot_taxa_boxplot_edit(ps1.com, "Genus", 6, "Species", color = "Set1", "Genus level differences for 6 genera")
+
+pn
+
+ggsave("./results/genus_6_boxplot_USE.pdf", height = 6, width = 10)
+
+
+```
+
+# Betadiversity
+
+```{r}
+#check for skewnness
+
+hist(taxa_sums(ps1))
+
+hist(log10(taxa_sums(ps1)))
+
+hist(taxa_sums(ps.rel))
+
+#weighted unifrac based on log10 abundances
+
+ps1
+ps.log10 <- microbiome::transform(ps1, "log10")
+
+set.seed(28219)
+
+wunifrac.mds <- ordinate(ps.log10, method = "MDS", 
+                         distance = "wunifrac")
+
+
+wunifrac.mds.plot <- plot_ordination(ps.log10, wunifrac.mds, 
+                                     color = "Species", 
+                                     title = "Weighted Unifrac") +  labs(col = "Species") 
+
+wunifrac.mds.plot <- wunifrac.mds.plot + geom_point(size = 2) + theme_bw() + scale_color_brewer("Species", palette = "Set1") 
+
+#No + stat_ellipse() as gives a convergence failure
+
+wunifrac.mds.plot
+ggsave("./results/MDS using Weighted Unifrac_Log10_noellipse_USE.pdf", height = 6, width = 8)
+
+#unweighted unifrac based on Log10 abundances
+set.seed(9999)
+unifrac.pcoa <- ordinate(ps.log10, method = "MDS", distance = "unifrac")
+evals.uni <- unifrac.pcoa$values$Eigenvalues
+
+unifrac.pcoa.plot <- plot_ordination(ps.log10, unifrac.pcoa, color = "Species", title = "UnWeighted Unifrac distance PCoA") +
+  labs(col = "Species") +
+  coord_fixed(sqrt(evals.uni[2] / evals.uni[1]))
+unifrac.pcoa.plot <- unifrac.pcoa.plot + geom_point(size = 2) + theme_bw() + scale_color_brewer("Species", palette = "Set1") 
+
+#No + stat_ellipse() as gives a convergence failure
+
+unifrac.pcoa.plot
+
+ggsave("./results/MDS using UnWeighted Unifrac_Log10_noellipse.pdf", height = 6, width = 8)
+
+```
+
+# Merge Plots
+
+```{r}
+p.ordinate.fun <- ggarrange(unifrac.pcoa.plot, wunifrac.mds.plot,
+                            common.legend = TRUE, labels = c("A", "B"))
+p.ordinate.fun
+ggsave("./results/Both_PCoA Unifrac_Log10_noellipse.pdf", height = 6, width = 10)
+
+```
+
+# Session Info
+
+```{r}
+
+sessionInfo()
+
+```
